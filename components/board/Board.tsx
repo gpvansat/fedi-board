@@ -289,7 +289,7 @@ function ListingCard(props: {
         >
           {copied ? 'Copied' : 'Copy npub'}
         </button>
-        <a className="rounded border border-border px-2 py-1" href={`nostr:${npub}`}>
+        <a className="rounded border border-border px-2 py-1" href={`https://njump.me/${npub}`} target="_blank" rel="noopener noreferrer">
           Message
         </a>
       </div>
