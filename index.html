@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fedi Board</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --accent: #f7931a;
+      --accent-hover: #ffaa33;
+      --border: #2a3544;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    h1 { margin: 0; font-size: 1.4rem; }
+    .badge {
+      background: var(--accent);
+      color: #000;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+    }
+    main { padding: 1rem; max-width: 720px; margin: 0 auto; }
+    .status {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .status.ok { color: #4ade80; }
+    .status.warn { color: #fbbf24; }
+    form, .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin: 0.5rem 0 0.25rem; }
+    input, textarea, select {
+      width: 100%;
+      padding: 0.6rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0f1419;
+      color: var(--text);
+      font: inherit;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    button {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 0.7rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.75rem;
+    }
+    button:hover { background: var(--accent-hover); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .listing {
+      border-left: 3px solid var(--accent);
+    }
+    .listing h3 { margin: 0 0 0.25rem; }
+    .meta { font-size: 0.8rem; color: var(--muted); }
+    .actions { margin-top: 0.5rem; }
+    .actions button { margin-right: 0.5rem; font-size: 0.85rem; padding: 0.4rem 0.7rem; }
+    .empty { text-align: center; color: var(--muted); padding: 2rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Fedi Board</h1>
+    <span class="badge">sats</span>
+  </header>
+  <main>
+    <div id="status" class="status">Checking wallet…</div>
+
+    <form id="post-form">
+      <h2 style="margin-top:0">Post a listing</h2>
+      <label>Title</label>
+      <input id="title" required placeholder="e.g. Need a gardener" />
+      <label>Category</label>
+      <select id="category">
+        <option>Odd job</option>
+        <option>For sale</option>
+        <option>Service offered</option>
+        <option>Wanted</option>
+      </select>
+      <label>Description</label>
+      <textarea id="description" required placeholder="Details, location, contact preference…"></textarea>
+      <label>Price / offer (optional, in sats or text)</label>
+      <input id="price" placeholder="e.g. 5000 sats or negotiable" />
+      <button type="submit" id="post-btn">Post for 500 sats</button>
+    </form>
+
+    <h2>Recent listings</h2>
+    <div id="listings"></div>
+  </main>
+
+  <script>
+    const LIST_FEE = 500;
+    const BUMP_FEE = 100;
+    const STORAGE_KEY = "fedi-board-listings";
+
+    const statusEl = document.getElementById("status");
+    const form = document.getElementById("post-form");
+    const listingsEl = document.getElementById("listings");
+    const postBtn = document.getElementById("post-btn");
+
+    function getListings() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
+      catch { return []; }
+    }
+    function saveListings(list) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    }
+
+    function render() {
+      const listings = getListings().sort((a, b) => b.bumpedAt - a.bumpedAt);
+      if (!listings.length) {
+        listingsEl.innerHTML = `<div class="empty">No listings yet. Be the first.</div>`;
+        return;
+      }
+      listingsEl.innerHTML = listings.map(l => `
+        <div class="card listing">
+          <h3>${escapeHtml(l.title)}</h3>
+          <div class="meta">${escapeHtml(l.category)} · ${new Date(l.createdAt).toLocaleString()}</div>
+          <p>${escapeHtml(l.description)}</p>
+          ${l.price ? `<div class="meta">Offer: ${escapeHtml(l.price)}</div>` : ""}
+          <div class="actions">
+            <button onclick="bump('${l.id}')">Bump (100 sats)</button>
+            <button onclick="remove('${l.id}')" style="background:#444">Remove</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    }
+
+    async function requestPayment(sats, memo) {
+      if (!window.webln) {
+        statusEl.textContent = "Not inside Fedi — payments disabled. Listings still work locally.";
+        statusEl.className = "status warn";
+        return true;
+      }
+      try {
+        await window.webln.enable();
+        const invoice = await window.webln.makeInvoice({ amount: sats, memo });
+        statusEl.textContent = `Invoice created for ${sats} sats. In a live deployment this would be paid to your federation or node.`;
+        statusEl.className = "status ok";
+        return true;
+      } catch (e) {
+        statusEl.textContent = "Payment cancelled or failed: " + e.message;
+        statusEl.className = "status warn";
+        return false;
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      postBtn.disabled = true;
+      const ok = await requestPayment(LIST_FEE, "Fedi Board listing");
+      if (!ok) { postBtn.disabled = false; return; }
+
+      const listing = {
+        id: crypto.randomUUID(),
+        title: document.getElementById("title").value.trim(),
+        category: document.getElementById("category").value,
+        description: document.getElementById("description").value.trim(),
+        price: document.getElementById("price").value.trim(),
+        createdAt: Date.now(),
+        bumpedAt: Date.now(),
+      };
+      const list = getListings();
+      list.push(listing);
+      saveListings(list);
+      form.reset();
+      render();
+      postBtn.disabled = false;
+    });
+
+    window.bump = async (id) => {
+      const ok = await requestPayment(BUMP_FEE, "Fedi Board bump");
+      if (!ok) return;
+      const list = getListings();
+      const item = list.find(x => x.id === id);
+      if (item) item.bumpedAt = Date.now();
+      saveListings(list);
+      render();
+    };
+
+    window.remove = (id) => {
+      if (!confirm("Remove this listing?")) return;
+      saveListings(getListings().filter(x => x.id !== id));
+      render();
+    };
+
+    if (window.webln) {
+      statusEl.textContent = "Fedi / WebLN detected. Payments available.";
+      statusEl.className = "status ok";
+    } else {
+      statusEl.textContent = "Opened outside Fedi. Listings work locally; open as a Mini App for payments.";
+      statusEl.className = "status warn";
+    }
+    render();
+  </script>
+</body>
+</html>
