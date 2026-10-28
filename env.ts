@@ -30,7 +30,11 @@ export type TServerEnv = z.infer<typeof schema>;
 let cached: TServerEnv | null = null;
 
 export function serverEnv(): TServerEnv {
-  if (!cached) cached = schema.parse(process.env);
+  if (!cached) cached = schema.parse({
+    ...process.env,
+    DATABASE_URL: process.env.DATABASE_URL || process.env.TURSO_DATABASE_URL || undefined,
+    DATABASE_AUTH_TOKEN: process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN || undefined,
+  });
   return cached;
 }
 
@@ -42,7 +46,7 @@ export function resetServerEnvForTests() {
 export function setupStatus(): { dbReady: boolean; paymentsReady: boolean; postingOpen: boolean } {
   const env = serverEnv();
   const prod = env.NODE_ENV === 'production';
-  const dbReady = !prod || !!process.env.DATABASE_URL;
+  const dbReady = !prod || !!(process.env.DATABASE_URL || process.env.TURSO_DATABASE_URL);
   let paymentsReady: boolean;
   if (env.PAYMENT_BACKEND === 'mock') paymentsReady = !prod;
   else if (env.PAYMENT_BACKEND === 'lnbits') paymentsReady = !!(env.LNBITS_URL && env.LNBITS_INVOICE_KEY);
