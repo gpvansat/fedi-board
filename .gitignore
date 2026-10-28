@@ -44,3 +44,6 @@ Thumbs.db
 
 # Misc
 *.log
+
+# Local SQLite
+local.db*

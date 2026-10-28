@@ -1,23 +1,39 @@
-import { createEnv } from '@t3-oss/env-nextjs';
 import { z } from 'zod';
 
-export const env = createEnv({
-  server: {
-    NODE_ENV: z.enum(['development', 'production', 'test']),
-    DATABASE_URL: z
-      .string()
-      .min(1)
-      .refine(
-        (value) => value.startsWith('libsql://') || value.startsWith('file:'),
-        'DATABASE_URL must be a libsql:// or file: URL for Turso',
-      ),
-    DATABASE_AUTH_TOKEN: z.string().min(1),
-  },
-  client: { NEXT_PUBLIC_APP_NAME: z.string().default('My Fedi App') },
-  runtimeEnv: {
-    NODE_ENV: process.env.NODE_ENV,
-    DATABASE_URL: process.env.DATABASE_URL,
-    DATABASE_AUTH_TOKEN: process.env.DATABASE_AUTH_TOKEN,
-    NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
-  },
+/**
+ * Server-only configuration. Parsed lazily (at request time) so `next build`
+ * does not need production secrets.
+ */
+const schema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  DATABASE_URL: z
+    .string()
+    .default('file:./local.db')
+    .refine((v) => v.startsWith('libsql://') || v.startsWith('file:') || v.startsWith('http'), 'DATABASE_URL must be libsql://, https:// or file:'),
+  DATABASE_AUTH_TOKEN: z.string().optional(),
+  PAYMENT_BACKEND: z.enum(['lnurl', 'lnbits', 'mock']).default('lnurl'),
+  OPERATOR_LIGHTNING_ADDRESS: z.string().optional(),
+  /** Accept a payment preimage (sha256(preimage) == invoice payment_hash) as proof when the LNURL server has no LUD-21 verify URL. */
+  ACCEPT_PREIMAGE_PROOF: z.enum(['true', 'false']).default('true'),
+  LNBITS_URL: z.string().url().optional(),
+  LNBITS_INVOICE_KEY: z.string().optional(),
+  POST_PRICE_SATS: z.coerce.number().int().positive().default(500),
+  BUMP_PRICE_SATS: z.coerce.number().int().positive().default(100),
+  /** Public origin, e.g. https://fedi-board.vercel.app — used to check NIP-98 `u` tags. */
+  PUBLIC_BASE_URL: z.string().url().optional(),
+  /** Comma-separated hex pubkeys that can hide/unhide any listing. */
+  ADMIN_PUBKEYS: z.string().default(''),
+  REPORT_HIDE_THRESHOLD: z.coerce.number().int().positive().default(3),
 });
+
+export type TServerEnv = z.infer<typeof schema>;
+let cached: TServerEnv | null = null;
+
+export function serverEnv(): TServerEnv {
+  if (!cached) cached = schema.parse(process.env);
+  return cached;
+}
+
+export function resetServerEnvForTests() {
+  cached = null;
+}
