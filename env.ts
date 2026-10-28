@@ -17,7 +17,7 @@ const schema = z.object({
   ACCEPT_PREIMAGE_PROOF: z.enum(['true', 'false']).default('true'),
   LNBITS_URL: z.string().url().optional(),
   LNBITS_INVOICE_KEY: z.string().optional(),
-  POST_PRICE_SATS: z.coerce.number().int().positive().default(500),
+  POST_PRICE_SATS: z.coerce.number().int().positive().default(5),
   BUMP_PRICE_SATS: z.coerce.number().int().positive().default(100),
   /** Public origin, e.g. https://fedi-board.vercel.app — used to check NIP-98 `u` tags. */
   PUBLIC_BASE_URL: z.string().url().optional(),

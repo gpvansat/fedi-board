@@ -39,7 +39,7 @@ export function Board() {
   const [listings, setListings] = useState<IListing[]>([]);
   const [mine, setMine] = useState<IListing[]>([]);
   const [filter, setFilter] = useState<string>('');
-  const [prices, setPrices] = useState({ postPriceSats: 500, bumpPriceSats: 100 });
+  const [prices, setPrices] = useState({ postPriceSats: 5, bumpPriceSats: 100 });
   const [composer, setComposer] = useState<null | { editing?: IListing }>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -158,9 +158,13 @@ export function Board() {
   return (
     <div className="mx-auto min-h-dvh max-w-xl px-4 pb-28">
       <header className="sticky top-0 z-10 -mx-4 flex items-center justify-between border-b border-border bg-bg/95 px-4 py-3 backdrop-blur">
-        <div>
+        <div className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="" width={36} height={36} className="h-9 w-9" />
+          <div>
           <h1 className="font-[family-name:var(--font-display)] text-xl font-bold">{APP_NAME}</h1>
           <p className="text-xs text-text-muted">{APP_TAGLINE}</p>
+          </div>
         </div>
         {pubkey ? (
           <span className="rounded-full bg-accent-dim px-2 py-1 font-mono text-[10px] text-accent">{hexToNpub(pubkey).slice(0, 12)}…</span>

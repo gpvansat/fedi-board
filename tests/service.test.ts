@@ -39,7 +39,7 @@ beforeEach(async () => {
   ctx = {
     db: await createDb(':memory:'),
     backend: wallet,
-    postPriceSats: 500,
+    postPriceSats: 5,
     bumpPriceSats: 100,
     acceptPreimageProof: true,
     reportHideThreshold: 2,
@@ -51,7 +51,7 @@ beforeEach(async () => {
 describe('board service', () => {
   it('listing only goes live after the server confirms payment', async () => {
     const r = await svc.createListing(ctx, alice, input);
-    expect(r.amountSats).toBe(500);
+    expect(r.amountSats).toBe(5);
     expect(await svc.listLive(ctx)).toHaveLength(0);
     expect((await svc.confirmPayment(ctx, r.paymentId)).settled).toBe(false);
     expect((await svc.confirmPayment(ctx, r.paymentId, bytesToHex(randomBytes(32)))).settled).toBe(false);

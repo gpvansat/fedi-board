@@ -14,7 +14,7 @@ npm test && npm run build
 ```
 
 ## How it works
-- **Post (500 sats) / bump (100 sats)**: the server asks the operator's wallet for an invoice
+- **Post (5 sats) / bump (100 sats)**: the server asks the operator's wallet for an invoice
   (`lib/payments/*`), checks the BOLT11 amount equals the price, stores a `pending` payment, and
   returns the invoice. The client pays with `window.webln.sendPayment`, then calls
   `POST /api/payments/:id`. The server decides (`lib/payments/verify.ts`):
