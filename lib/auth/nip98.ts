@@ -46,7 +46,7 @@ function normUrl(u: string): string {
 export function verifyNip98(args: {
   header: string | null;
   method: string;
-  url: string;
+  url: string | string[];
   body?: string;
   nowSec?: number;
   maxAgeSec?: number;
@@ -68,7 +68,8 @@ export function verifyNip98(args: {
   const u = tag('u');
   if (!u) throw new AuthError('Missing u tag');
   try {
-    if (normUrl(u) !== normUrl(url)) throw new AuthError('URL mismatch');
+    const allowed = (Array.isArray(url) ? url : [url]).map(normUrl);
+    if (!allowed.includes(normUrl(u))) throw new AuthError('URL mismatch');
   } catch (e) {
     throw e instanceof AuthError ? e : new AuthError('URL mismatch');
   }

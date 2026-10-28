@@ -12,6 +12,15 @@ describe('NIP-98 auth', () => {
     const ev = signNip98(sk, url, 'POST', body);
     expect(verifyNip98({ header: header(ev), method: 'POST', url, body }).pubkey).toBe(pk);
   });
+  it('accepts either allowed origin (dual-host) and rejects others', () => {
+    const allowed = ['https://satsboard-fedi.vercel.app/api/listings', 'https://fedi-board.vercel.app/api/listings'];
+    for (const u of allowed) {
+      const ev = signNip98(sk, u, 'POST', body);
+      expect(verifyNip98({ header: header(ev), method: 'POST', url: allowed, body }).pubkey).toBe(pk);
+    }
+    const evil = signNip98(sk, 'https://evil.example/api/listings', 'POST', body);
+    expect(() => verifyNip98({ header: header(evil), method: 'POST', url: allowed, body })).toThrow(/URL/);
+  });
   it('rejects missing header', () => {
     expect(() => verifyNip98({ header: null, method: 'GET', url })).toThrow(AuthError);
   });

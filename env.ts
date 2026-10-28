@@ -19,8 +19,10 @@ const schema = z.object({
   LNBITS_INVOICE_KEY: z.string().optional(),
   POST_PRICE_SATS: z.coerce.number().int().positive().default(5),
   BUMP_PRICE_SATS: z.coerce.number().int().positive().default(100),
-  /** Public origin, e.g. https://fedi-board.vercel.app — used to check NIP-98 `u` tags. */
+  /** Public origin, e.g. https://satsboard-fedi.vercel.app — used to check NIP-98 `u` tags. */
   PUBLIC_BASE_URL: z.string().url().optional(),
+  /** Extra accepted origins for NIP-98 (comma-separated), e.g. old hosts. */
+  ALLOWED_BASE_URLS: z.string().optional(),
   /** Comma-separated hex pubkeys that can hide/unhide any listing. */
   ADMIN_PUBKEYS: z.string().default(''),
   REPORT_HIDE_THRESHOLD: z.coerce.number().int().positive().default(3),
