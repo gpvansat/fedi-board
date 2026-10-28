@@ -37,3 +37,15 @@ export function serverEnv(): TServerEnv {
 export function resetServerEnvForTests() {
   cached = null;
 }
+
+/** What is configured. In production, a missing DATABASE_URL or payment backend disables writes instead of erroring. */
+export function setupStatus(): { dbReady: boolean; paymentsReady: boolean; postingOpen: boolean } {
+  const env = serverEnv();
+  const prod = env.NODE_ENV === 'production';
+  const dbReady = !prod || !!process.env.DATABASE_URL;
+  let paymentsReady: boolean;
+  if (env.PAYMENT_BACKEND === 'mock') paymentsReady = !prod;
+  else if (env.PAYMENT_BACKEND === 'lnbits') paymentsReady = !!(env.LNBITS_URL && env.LNBITS_INVOICE_KEY);
+  else paymentsReady = !!env.OPERATOR_LIGHTNING_ADDRESS;
+  return { dbReady, paymentsReady, postingOpen: dbReady && paymentsReady };
+}

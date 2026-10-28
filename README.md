@@ -1,4 +1,6 @@
-# Fedi Board (v2)
+# SatsBoard
+
+_An independent community classifieds mini app for Fedi federations. Not an official Fedi product._
 
 Sats-priced person-to-person community board (odd jobs, for sale, services, wanted) that runs as a
 Fedi mini app. Scaffolded with `create-fedi-app@0.1.5 --database turso`. Product name lives in

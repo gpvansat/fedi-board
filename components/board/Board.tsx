@@ -32,7 +32,8 @@ export function Board() {
   const { isAvailable: hasNostr, isLoading: nostrLoading } = useNostr();
   const { pubkey, getPublicKey, signEvent } = useIdentity();
   const { sendPayment } = usePayment();
-  const canPost = hasWebln && hasNostr;
+  const [postingOpen, setPostingOpen] = useState<boolean | null>(null);
+  const canPost = hasWebln && hasNostr && postingOpen === true;
   const loadingCaps = weblnLoading || nostrLoading;
 
   const [listings, setListings] = useState<IListing[]>([]);
@@ -69,7 +70,13 @@ export function Board() {
     load();
   }, [load]);
   useEffect(() => {
-    fetch('/api/config').then((r) => r.json()).then(setPrices).catch(() => {});
+    fetch('/api/config')
+      .then((r) => r.json())
+      .then((c) => {
+        setPrices({ postPriceSats: c.postPriceSats, bumpPriceSats: c.bumpPriceSats });
+        setPostingOpen(c.postingOpen !== false);
+      })
+      .catch(() => setPostingOpen(false));
   }, []);
 
   async function payAndConfirm(paymentId: string, invoice: string) {
@@ -164,7 +171,13 @@ export function Board() {
         ) : null}
       </header>
 
-      {!loadingCaps && !canPost && (
+      {postingOpen === false && (
+        <div role="status" className="mt-4 rounded-xl border border-accent/40 bg-accent-dim p-3 text-sm">
+          <strong>Posting opens soon.</strong> {APP_NAME} is being set up — browse now, listings open shortly.
+        </div>
+      )}
+
+      {!loadingCaps && postingOpen !== false && !(hasWebln && hasNostr) && (
         <div role="status" className="mt-4 rounded-xl border border-accent/40 bg-accent-dim p-3 text-sm">
           <strong>Read-only.</strong> Open {APP_NAME} inside the <a className="underline" href="https://fedi.xyz/get-the-app">Fedi app</a> to post, bump or contact sellers with your Nostr identity.
         </div>
@@ -195,7 +208,7 @@ export function Board() {
       )}
 
       <section className="mt-5 space-y-3">
-        {listings.length === 0 && <p className="py-10 text-center text-sm text-text-muted">No listings yet. Be the first to post.</p>}
+        {listings.length === 0 && <p className="py-10 text-center text-sm text-text-muted">{postingOpen === false ? 'No listings yet — coming soon.' : 'No listings yet. Be the first to post.'}</p>}
         {listings.map((l) => (
           <ListingCard
             key={l.id}

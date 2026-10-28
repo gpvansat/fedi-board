@@ -1,5 +1,5 @@
 /** Single place to rename the product. */
-export const APP_NAME = 'Fedi Board';
+export const APP_NAME = 'SatsBoard';
 export const APP_TAGLINE = 'Buy, sell, hire and help — paid in sats, inside your federation.';
 
 export const CATEGORIES = [

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { serverEnv } from '../../env';
+import { serverEnv, setupStatus } from '../../env';
 import { AuthError, verifyNip98 } from '../auth/nip98';
 import { getDb } from '../db';
 import { getPaymentBackend, PaymentBackendError } from '../payments';
@@ -7,6 +7,7 @@ import { BoardError, consumeAuthEvent, type IBoardCtx } from './service';
 
 export async function boardCtx(): Promise<IBoardCtx> {
   const env = serverEnv();
+  if (!setupStatus().postingOpen) throw new BoardError('Posting opens soon', 503);
   return {
     db: await getDb(),
     backend: getPaymentBackend(),
